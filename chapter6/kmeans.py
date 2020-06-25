@@ -6,7 +6,7 @@ from random import uniform
 from statistics import mean, pstdev
 from dataclasses import dataclass
 
-from data_point import data_point
+from data_point import DataPoint
 
 def zscores(original: Sequence[float]) -> List[float]:
     avg: float = mean(original)
@@ -15,3 +15,106 @@ def zscores(original: Sequence[float]) -> List[float]:
         return [0]*len(original)
     return [(x-avg)/std for x in original]
 
+Point = TypeVar('Point', bound=DataPoint)
+
+class KMeans(Generic[Point]):
+    def __init__(self, k: int, points: List[Point]) -> None:
+        # 簇的数量不能为0，也不能为负数
+        if k<1 :
+            raise ValueError('k must be >= 1')
+        self._points: List[Point] = points
+        self._zscore_normalize()
+        # 初始化空簇
+        self._clusters: List[KMeans.Cluster] = []
+        for _ in range(k):
+            # 选择随机中心点
+            rand_point: DataPoint = self._random_point()
+            # 用选出的这个随机中心店聚集起一个簇来
+            # 目前簇只有中心点，没有其他的成员点
+            cluster: KMeans.Cluster = KMeans.Cluster([],rand_point)
+            self._clusters.append(cluster)
+    
+    @property
+    def _centroids(self) -> List[DataPoint]:
+        return [x.centroid for x in self._clusters]
+
+    def _dimension_slice(self,dimension: int) -> List[float]:
+        return [x.dimensions[dimension] for x in self._points]
+    
+    def _zscore_normalize(self) -> None:
+        zscored: List[List[float]] = [[] for _ in range(len(self._points))]
+        for dimension in range(self._points[0].num_dimensions):
+            dimension_slice: List[float] = self._dimension_slice(dimension)
+            for index, zscore in enumerate(zscores(dimension_slice)):
+                zscored[index].append(zscore)
+        for i in range(len(self._points)):
+            self._points[i].dimensions = tuple(zscored[i])
+
+    def _random_point(self) -> DataPoint:
+        '''对所有点来说，每个维度都取这些点提供的范围内的一个随机值，组成一个随机点'''
+        rand_dimensions: List[float] = []
+        for dimension in range(self._points[0].num_dimensions):
+            values: List[float] = self._dimension_slice(dimension)
+            rand_value: float = uniform(min(values),max(values))
+            rand_dimensions.append(rand_value)
+        return DataPoint(rand_dimensions)
+
+    def _assign_clusters(self) -> None:
+        '''给数据点寻找最近的中心点，并把数据点分到那个簇里'''
+        for point in self._points:
+            closest: DataPoint = min(self._centroids,
+            key=partial(DataPoint.distance,point))
+            idx: int = self._centroids.index(closest)
+            cluster: KMeans.Cluster = self._clusters[idx]
+            cluster.points.append(point)
+
+    def _generate_centroids(self) -> None:
+        '''找到每个簇的中心，并把中心点换成它'''
+        for cluster in self._clusters:
+            # 如果当前的簇还没有数据点，那就先不管它
+            if len(cluster.points) == 0:
+                continue
+            # 保存所有点在每个维度的平均值
+            means: List[float] = []
+            for dimension in range(cluster.points[0].num_dimensions):
+                dimension_slice: List[float] = [p.dimensions[dimension] for p in cluster.points]
+                means.append(mean(dimension_slice))
+            # 用这些平均值构造一个新点做中心点
+            cluster.centroid = DataPoint(means)
+
+    def run(self,max_iterations:int = 100) -> List[KMeans.Cluster]:
+        for iteration in range(max_iterations):
+            for cluster in self._clusters:
+                # 清空上一轮每个簇里的点
+                cluster.points.clear()
+            # 重新给点分簇
+            self._assign_clusters()
+            # 保存当前的中心点
+            old_centroids: List[DataPoint] = deepcopy(self._centroids)
+            # 生成新的中心点
+            self._generate_centroids()
+            # 如果两轮的中心点一样，说明已经稳定下来
+            # 当前的中心点就是最好的中心点，返回当前的簇
+            if old_centroids == self._centroids:
+                print(f'Converged after {iteration} iterations')
+                return self._clusters
+        # 迭代次数耗尽之后，返回当前的簇
+        return self._clusters
+
+
+    @dataclass
+    class Cluster:
+        points: List[Point]
+        centroid: DataPoint
+
+
+
+if __name__ == '__main__':
+    point1: DataPoint = DataPoint([2.0,1.0,1.0])
+    point2: DataPoint = DataPoint([2.0,2.0,5.0])
+    point3: DataPoint = DataPoint([3.0,1.5,2.5])
+    kmeans_test: KMeans[DataPoint] = KMeans(2, [point1,point2,point3])
+    test_clusters: List[KMeans.Cluster] = kmeans_test.run()
+    for index, cluster  in enumerate(test_clusters):
+        print(f'Cluster {index}: {cluster.points}')
+        
