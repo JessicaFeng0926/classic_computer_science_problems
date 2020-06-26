@@ -2,6 +2,8 @@ from __future__ import annotations
 from typing import Iterator, Tuple, List, Iterable
 from math import sqrt
 
+import pandas as pd
+
 class DataPoint:
     def __init__(self, initial: Iterable[float]) -> None:
         self._originals: Tuple[float, ...] = tuple(initial)
@@ -23,3 +25,15 @@ class DataPoint:
         
     def __repr__(self) -> str:
         return self._originals.__repr__()
+
+
+def get_datapoints_from_csv(csv_filepath: str) -> List[DataPoint]:
+    '''从csv文件中导入数据获取一系列数据点'''
+    df = pd.read_csv(csv_filepath,index_col=False)
+    datapoints = []
+    for index in range(df.shape[0]):
+        datapoints.append(DataPoint(df.loc[index]))
+    return datapoints
+
+
+        

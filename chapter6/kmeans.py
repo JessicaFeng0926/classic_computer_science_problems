@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TypeVar, Generic, List, Sequence
+from typing import TypeVar, Generic, List, Sequence, Optional
 from copy import deepcopy
 from functools import partial
 from random import uniform
@@ -18,21 +18,33 @@ def zscores(original: Sequence[float]) -> List[float]:
 Point = TypeVar('Point', bound=DataPoint)
 
 class KMeans(Generic[Point]):
-    def __init__(self, k: int, points: List[Point]) -> None:
+    def __init__(self, k: int, points: List[Point], initial_centroids: Optional[List[Point]]=None) -> None:
         # 簇的数量不能为0，也不能为负数
         if k<1 :
             raise ValueError('k must be >= 1')
+        
         self._points: List[Point] = points
         self._zscore_normalize()
         # 初始化空簇
         self._clusters: List[KMeans.Cluster] = []
-        for _ in range(k):
-            # 选择随机中心点
-            rand_point: DataPoint = self._random_point()
-            # 用选出的这个随机中心店聚集起一个簇来
-            # 目前簇只有中心点，没有其他的成员点
-            cluster: KMeans.Cluster = KMeans.Cluster([],rand_point)
-            self._clusters.append(cluster)
+        if initial_centroids is None:
+            for _ in range(k):
+                # 选择随机中心点
+                rand_point: DataPoint = self._random_point()
+                # 用选出的这个随机中心点聚集起一个簇来
+                # 目前簇只有中心点，没有其他的成员点
+                cluster: KMeans.Cluster = KMeans.Cluster([],rand_point)
+                self._clusters.append(cluster)
+        else:
+            if len(initial_centroids) != k:
+                raise ValueError('The number of centroids must be k')
+            for i in range(k):
+                # 选择对应的中心点
+                centroid: DataPoint = initial_centroids[i]
+                # 用给定的这个中心点聚集起一个簇来
+                # 目前簇只有中心点，没有其他的成员点
+                cluster: KMeans.Cluster = KMeans.Cluster([],centroid)
+                self._clusters.append(cluster)
     
     @property
     def _centroids(self) -> List[DataPoint]:
