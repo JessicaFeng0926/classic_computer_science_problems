@@ -45,10 +45,7 @@ class Network:
         for layer in self.layers[1:]:
             for neuron in layer.neurons:
                 for w in range(len(neuron.weights)):
-                    neuron.weights[w] = neuron.weights[w]+\
-                        (neuron.learning_rate*\
-                            (layer.previous_layer.output_cache[w])*\
-                                neuron.delta)
+                    neuron.weights[w] = neuron.weights[w]+(neuron.learning_rate*(layer.previous_layer.output_cache[w])*neuron.delta)
 
 
     def train(self, inputs: List[List[float]], expecteds: List[List[float]]) -> None:
@@ -59,7 +56,7 @@ class Network:
             self.backpropagate(ys)
             self.update_weights()
 
-    def valildate(self, inputs: List[List[float]], expecteds: List[T], 
+    def validate(self, inputs: List[List[float]], expecteds: List[T], 
                   interpret_output: Callable[[List[float]],T]) -> Tuple[int, int, float]:
         '''这是用来测试训练好的网络的，返回正确个数、总测试数量、正确率'''
         correct: int = 0
