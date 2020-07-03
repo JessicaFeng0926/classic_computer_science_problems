@@ -41,7 +41,7 @@ class TTTBoard(Board):
 
     @property
     def legal_moves(self) -> List[Move]:
-        return [Move[l] for l in range(len(self.position)) \
+        return [Move(l) for l in range(len(self.position)) \
             if self.position[l] == TTTPiece.E]
 
     @property
