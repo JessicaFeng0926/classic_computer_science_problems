@@ -18,7 +18,7 @@ vt_distances: Dict[str,Dict[str,int]] = {
     "White River Junction":{
         'Rutland':46,
         'Burlington':91,
-        'Bennigton':98,
+        'Bennington':98,
         'Brattleboro':65
     },
     "Bennington":{
@@ -35,3 +35,26 @@ vt_distances: Dict[str,Dict[str,int]] = {
 
     }
 }
+
+vt_cities: Iterable[str] = vt_distances.keys()
+
+city_permutations: Iterable[Tuple[str,...]] = permutations(vt_cities)
+
+# 因为推销员最后要回到他出发的那个城市
+# 所以在每个排列中还要把第0个城市加到元组的末尾
+tsp_paths: List[Tuple[str,...]] = [c+(c[0],) for c in city_permutations]
+
+if __name__ == '__main__':
+    best_path: Tuple[str,...]
+    # 把最短距离初始化一个随机的大数字
+    min_distance: int = 99999999999
+    for path in tsp_paths:
+        distance: int = 0
+        last: str = path[0]
+        for next in path[1:]:
+            distance += vt_distances[last][next]
+            last = next
+        if distance < min_distance:
+            min_distance = distance
+            best_path = path
+    print(f'The shortest path is {best_path} in {min_distance} miles.')
